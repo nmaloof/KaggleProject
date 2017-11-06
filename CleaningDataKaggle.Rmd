@@ -1,0 +1,90 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+#### Loading Libraries
+```{r Libraries, warning=FALSE, message=FALSE}
+library(dplyr)
+```
+
+#### Loading and Cleaning Data
+```{r Dataset, warning=FALSE, message=FALSE}
+original <- read.csv("train.csv")
+
+# Removing Agreed Upon Variables - Due to proportions being over 95% of one group
+cleaned <- original %>% select(., -Id, -Street, -Alley, -Utilities, -LandSlope, -Condition2, -RoofMatl,
+                               -BsmtFinSF2, -Heating, -LowQualFinSF, -Functional, -X3SsnPorch, 
+                               -PoolArea, -PoolQC, -MiscFeature, -MiscVal)
+
+#--Fixing Some NA's and Nuances Manually--#
+cleaned[is.na(cleaned$Electrical),"Electrical"] <- "SBrkr"
+cleaned[333, "BsmtFinType2"] <- "GLQ"
+levels(cleaned$MSZoning) <- c("C", "FV", "RH", "RL", "RM")
+
+cleaned <- cleaned %>% group_by(., Neighborhood) %>% 
+    mutate(., LotFrontage = replace(LotFrontage, is.na(LotFrontage), median(LotFrontage, na.rm = T))) %>%
+    ungroup()
+
+cleaned$GarageYrBlt <- factor(ifelse(is.na(cleaned$GarageYrBlt), "No", "Yes"))
+cleaned$MasVnrArea[is.na(cleaned$MasVnrArea)] <- 0
+
+#--Changing NA's to Absent--#
+cleaned$Fence <- ifelse(is.na(cleaned$Fence), "No", "Yes")
+cleaned$GarageCond <- factor(cleaned$GarageCond, exclude = NULL, levels = c("Ex", "Fa", "Gd", "Po", "TA", NA),
+                             labels = c("Ex", "Fa", "Gd", "Po", "TA", "Absent"))
+cleaned$GarageQual <- factor(cleaned$GarageQual, exclude = NULL, levels = c("Ex", "Fa", "Gd", "Po", "TA", NA),
+                             labels = c("Ex", "Fa", "Gd", "Po", "TA", "Absent"))
+cleaned$GarageFinish <- factor(cleaned$GarageFinish, exclude = NULL, levels = c("Fin", "RFn", "Unf", NA),
+                             labels = c("Fin", "RFn", "Unf", "Absent"))
+cleaned$GarageType <- factor(cleaned$GarageType, exclude = NULL, levels = c("2Types", "Attchd", "Basment", "BuiltIn",
+                                                                            "CarPort", "Detchd", NA),
+                             labels = c("2Types", "Attchd", "Basment", "BuiltIn", "CarPort", "Detchd", "Absent"))
+cleaned$FireplaceQu <- factor(cleaned$FireplaceQu, exclude = NULL, levels = c("Ex", "Fa", "Gd", "Po", "TA", NA),
+                             labels = c("Ex", "Fa", "Gd", "Po", "TA", "Absent"))
+cleaned$BsmtCond <- factor(cleaned$BsmtCond, exclude = NULL, levels = c("Fa", "Gd", "Po", "TA", NA),
+                             labels = c("Fa", "Gd", "Po", "TA", "Absent"))
+cleaned$BsmtExposure <- factor(cleaned$BsmtExposure, exclude = NULL, levels = c("Av", "Gd", "Mn", "No", NA),
+                               labels = c("Av", "Gd", "Mn", "No", "Absent"))
+cleaned$MasVnrType <- factor(cleaned$MasVnrType, exclude = NULL, levels = c("BrkCmn", "BrkFace", "None", "Stone", NA),
+                             labels = c("BrkCmn", "BrkFace", "None", "Stone", "Absent"))
+cleaned$BsmtQual <- factor(cleaned$BsmtQual, exclude = NULL, levels = c("Ex", "Fa", "Gd", "TA", NA), 
+                           labels = c("Ex", "Fa", "Gd", "TA", "Absent"))
+cleaned$BsmtFinType1 <- factor(cleaned$BsmtFinType1, exclude = NULL, levels = c("ALQ", "BLQ", "GLQ", "LwQ", "Rec",
+                                                                                "Unf", NA), 
+                               labels = c("ALQ", "BLQ", "GLQ", "LwQ", "Rec", "Unf", "Absent"))
+cleaned$BsmtFinType2 <- factor(cleaned$BsmtFinType2, exclude = NULL, levels = c("ALQ", "BLQ", "GLQ", "LwQ", "Rec",
+                                                                                "Unf", NA), 
+                               labels = c("ALQ", "BLQ", "GLQ", "LwQ", "Rec", "Unf", "Absent"))
+
+#--Making Nones to Absent--#
+cleaned <- cleaned %>% 
+    mutate(., MasVnrType = as.character(MasVnrType)) %>% 
+    mutate(., MasVnrType = ifelse(MasVnrType == "None", "Absent", MasVnrType))
+
+cleaned$MasVnrType <- factor(cleaned$MasVnrType)
+
+
+#--Log Transforms on Numerical--#
+cleaned$LotFrontage <- log(cleaned$LotFrontage + 1)
+cleaned$LotArea <- log(cleaned$LotArea + 1)
+cleaned$MasVnrArea <- log(cleaned$MasVnrArea + 1)
+cleaned$BsmtFinSF1 <- log(cleaned$BsmtFinSF1 + 1)
+cleaned$BsmtUnfSF <- log(cleaned$BsmtUnfSF + 1)
+cleaned$X1stFlrSF <- log(cleaned$X1stFlrSF + 1)
+cleaned$GrLivArea <- log(cleaned$GrLivArea + 1)
+cleaned$WoodDeckSF <- log(cleaned$WoodDeckSF + 1)
+cleaned$OpenPorchSF <- log(cleaned$OpenPorchSF + 1)
+cleaned$EnclosedPorch<- log(cleaned$EnclosedPorch+ 1) 
+cleaned$ScreenPorch <- log(cleaned$ScreenPorch + 1)
+
+
+# colnames(cleaned[ , colSums(is.na(cleaned)) > 0])
+# summary(cleaned)
+
+
+```
+
+```{r}
+
+```
