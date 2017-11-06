@@ -1,0 +1,51 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+#### Loading Libraries
+```{r Libraries, message=FALSE}
+library(dplyr)
+library(car)
+library(ggplot2)
+```
+
+#### Loading Dataset
+```{r Data, message=FALSE}
+cleaned <- read.csv("cleanedKaggle.csv")
+cleaned['X'] <- NULL
+
+forImpute <- cleaned %>% filter(., LotFrontage != 0) %>% group_by(., Neighborhood) %>%
+    summarise(., AvgLot = median(LotFrontage))
+
+cleaned.extra <- cleaned %>% left_join(., forImpute) %>% mutate(LotFron = ifelse(LotFrontage == 0, AvgLot, LotFrontage))
+
+cleaned <- cleaned.extra %>% select(., -AvgLot, -LotFrontage)
+
+cleaned$MSSubClass <- factor(cleaned$MSSubClass)
+
+
+rm(cleaned.extra)
+rm(forImpute)
+```
+
+#### Splitting Dataset
+```{r Splitting}
+set.seed(0)
+
+train.indxs <- sample(1:nrow(cleaned), 0.8*nrow(cleaned))
+test.indxs <- -train.indxs
+
+training <- cleaned[train.indxs, ]
+testing <- cleaned[test.indxs, ]
+```
+
+#### Plotting Dataset
+```{r Plotting}
+pairs(SalePrice~LotArea + MasVnrArea + RoofStyle + MSSubClass, data = training)
+summary(training)
+```
+
+#### RandomForest Model
+```{r RandomForest}
+```
