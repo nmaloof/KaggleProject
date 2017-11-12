@@ -1,0 +1,99 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+#### Loading Libraries
+```{r Libraries, message=FALSE}
+# Manipulation
+library(dplyr)
+# Regrssion
+library(car)
+# Trees
+library(tree)
+library(randomForest)
+# Visualization
+library(ggplot2)
+```
+
+#### Loading Dataset
+```{r Data, message=FALSE}
+cleaned <- read.csv("cleanedKaggle.csv")
+cleaned['X'] <- NULL
+
+forImpute <- cleaned %>% filter(., LotFrontage != 0) %>% group_by(., Neighborhood) %>%
+    summarise(., AvgLot = median(LotFrontage))
+
+cleaned.extra <- cleaned %>% left_join(., forImpute) %>% mutate(LotFron = ifelse(LotFrontage == 0, AvgLot, LotFrontage))
+
+cleaned <- cleaned.extra %>% select(., -AvgLot, -LotFrontage)
+
+cleaned$MSSubClass <- factor(cleaned$MSSubClass)
+
+cleaned$X1stFlrSF <- as.numeric(as.character(cleaned$X1stFlrSF))
+cleaned$BsmtFinSF2 <- as.numeric(as.character(cleaned$BsmtFinSF2))
+cleaned$SalePrice <- as.numeric(cleaned$SalePrice)
+cleaned <- cleaned %>% filter(., !is.na(BsmtFinSF2), !is.na(X1stFlrSF))
+
+cleaned["Street"] <- NULL
+cleaned["Alley"] <- NULL
+cleaned["Utilities"] <- NULL
+cleaned["LandSlope"] <- NULL
+cleaned["Condition2"] <- NULL
+cleaned["RoofMatl"] <- NULL
+cleaned["BsmtFinSF2"] <- NULL
+cleaned["Heating"] <- NULL
+cleaned["LowQualFinSF"] <- NULL
+cleaned["Functional"] <- NULL
+cleaned["X3SsnPorch"] <- NULL
+cleaned["PoolArea"] <- NULL
+cleaned["PoolQC"] <- NULL
+cleaned["MiscFeature"] <- NULL
+cleaned["MiscVal"] <- NULL
+
+rm(cleaned.extra)
+rm(forImpute)
+```
+
+#### Splitting Dataset
+```{r Splitting}
+set.seed(0)
+
+train.indxs <- sample(1:nrow(cleaned), 0.8*nrow(cleaned))
+test.indxs <- -train.indxs
+
+training <- cleaned[train.indxs, ]
+testing <- cleaned[test.indxs, ]
+```
+
+#### Plotting Dataset
+```{r Plotting}
+pairs(SalePrice~LotArea + MasVnrArea + RoofStyle + MSSubClass, data = training)
+summary(training)
+```
+
+#### RandomForest Model
+```{r RandomForest}
+set.seed(0)
+
+# rndFor.training <- randomForest(SalePrice ~ . - MiscVal - PoolArea, data = training, importance = TRUE, ntree = 10000)
+oob.err <- numeric(79)
+for(mtry in 1:79){
+    fit <- randomForest(SalePrice ~ ., data = training, mtry = mtry)
+    oob.err[mtry] = fit$mse[500]
+    cat("We're performing iteration", mtry, "\n")
+}
+
+```
+
+
+```{r}
+rndFor.training
+importance(rndFor.training)
+varImpPlot(rndFor.training)
+
+yhat <- predict(rndFor.training, testing)
+
+plot(yhat, testing$SalePrice)
+mean((yhat - testing$SalePrice)^2)
+```
