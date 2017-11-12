@@ -1,5 +1,7 @@
 # No datafiles accepted
 *.csv
 *.sqlite
+*.txt
+*.png
 *.Rhistory
 *.png
