@@ -1,0 +1,9 @@
+# No datafiles accepted
+*.csv
+*.sqlite
+<<<<<<< HEAD
+*.Rhistory
+=======
+*.txt
+>>>>>>> 82c0c0d19e672cc175c40a844725a7c7c3939d05
+*.png
