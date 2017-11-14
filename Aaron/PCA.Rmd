@@ -1,0 +1,188 @@
+---
+title: "Untitled"
+author: "Aaron Owen"
+date: "11/3/2017"
+output: html_document
+---
+
+```{r}
+library(caret)
+```
+
+```{r}
+iris2 = iris
+```
+
+```{r}
+iris2$good = ifelse(iris$Sepal.Length < 5.5, "low", "high")
+```
+
+```{r}
+iris2$good = as.factor(iris2$good)
+```
+
+```{r}
+data = model.matrix(good ~ ., iris2)[, -1]
+
+# as.data.frame(apply(data, 2, scale))
+```
+
+```{r}
+# log transform 
+log.ir <- log(iris[, 1:4])
+ir.species <- iris[, 5]
+ 
+# apply PCA - scale. = TRUE is highly 
+# advisable, but default is FALSE. 
+ir.pca <- prcomp(log.ir,
+                 center = TRUE,
+                 scale. = TRUE) 
+
+require(caret)
+trans1 = preProcess(iris[,1:4], 
+                   method=c("pca"))
+PC1 = predict(trans1, iris[,1:4])
+```
+
+```{r}
+# Retained PCs
+head(PC1, 3)
+
+m1 = glm(iris2$good ~ PC1[, 1] + PC1[, 2], family = "binomial")
+
+summary(m1)
+
+```
+
+```{r}
+train = read.csv("train.csv", stringsAsFactors = F)
+
+train2 = train
+
+train[c("LotFrontage", "MSZoning")]
+
+house = model.matrix(SalePrice ~ ., train[c("MSZoning", "LotFrontage", "LotArea", "Street", "SalePrice")])[, -1]
+house = model.matrix(SalePrice ~ ., train2)[, -1]
+
+
+
+dim(house)
+dim(house.train)
+
+trans = preProcess(house, 
+                   method=c("pca"))
+PC = predict(trans, house)
+
+summary(lm(train$SalePrice ~ PC))
+
+PC
+
+
+```
+
+```{r}
+# split the data set into 80% training and 20% testing
+set.seed(0)
+
+train_index = sample(1:nrow(train2), 8*nrow(train2)/10) # Training indices.
+
+house.train = train2[train_index, ] # Train data
+house.test = train2[-train_index, ] # Test dataset
+```
+
+```{r}
+library(glmnet)
+
+lasso.models.train = glmnet(house.train, train2$SalePrice, alpha = 1, lambda = grid)
+betavals1 = coef(ridge.models.train)
+
+set.seed(0)
+cv.ridge.out = cv.glmnet(x[train, ], y[train],
+                         lambda = grid, alpha = 1, nfolds = 10)
+
+bestlambda.ridge = cv.ridge.out$lambda.min
+
+ridge.bestlambdatrain = predict(ridge.models.train, s = bestlambda.ridge, newx = x[test, ])
+mean((ridge.bestlambdatrain - y.test)^2) # --> 0.4759
+
+all_data_ridge = glmnet(x, y, alpha = 1, lambda = bestlambda.ridge)
+newcoef = coef(all_data_ridge)
+newcoef
+
+all_data_pred_ridge = predict(all_data, s = bestlambda.ridge, newx = x)
+mean((all_data_pred_ridge - y)^2)
+```
+
+```{r}
+train2 = train
+
+# make list of categorical variables:
+categorical = c("MSSubClass", "MSZoning", "Street", "Alley", "LotShape", 
+               "LandContour", "Utilities", "LotConfig", "LandSlope", "Neighborhood", 
+               "Condition1", "Condition2", "BldgType", "HouseStyle", "RoofStyle",
+               "RoofMatl", "Exterior1st", "Exterior2nd", "MasVnrType", "ExterQual",
+               "ExterCond", "Foundation", "BsmtQual", "BsmtCond", "BsmtExposure",
+               "BsmtFinType1", "BsmtFinType2", "Heating", "HeatingQC", "CentralAir",
+               "Electrical", "KitchenQual", "Functional", "FireplaceQu", "GarageType",
+               "GarageFinish", "GarageQual", "GarageCond", "PavedDrive", "PoolQC", 
+               "Fence", "MiscFeature", "SaleType", "SaleCondition")
+
+numerical = c("LotFrontage", "LotArea", "OverallQual", "OverallCond", "YearBuilt", "YearRemodAdd",
+              "MasVnrArea", "BsmtFinSF1", "BsmtFinSF2", "BsmtUnfSF", "TotalBsmtSF", "X1stFlrSF",
+              "X2ndFlrSF", "LowQualFinSF", "GrLivArea", "BsmtFullBath", "BsmtHalfBath", "FullBath",
+              "HalfBath", "BedroomAbvGr", "KitchenAbvGr", "TotRmsAbvGrd", "Fireplaces", "GarageYrBlt",
+              "GarageCars", "GarageArea", "WoodDeckSF", "OpenPorchSF", "EnclosedPorch", "X3SsnPorch",
+              "ScreenPorch", "PoolArea", "MiscVal", "MoSold", "YrSold")
+
+# make them all str and replace "nan's" with MISSING
+for (c in categorical){
+    train2[[c]] = as.character(train2[[c]])
+    train2[[c]][is.na(train2[[c]])] = "MISSING"
+    }
+
+for (n in numerical) {
+    train2[[n]] = impute(train2[[n]], mean)
+    }
+
+train2
+
+```
+
+```{r}
+abc = c(NA, 1, 2, 3)
+
+abc[is.na(abc)]<-"MISSING"
+
+abc
+
+library(Hmisc)
+
+# 1.7
+x = titanic3
+x$age = impute(z$age, "random")
+
+x = titanic3
+impute(abc, mean)
+
+abc = impute(abc, mean)
+abc
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,286 @@
+---
+title: "Untitled"
+author: "Aaron Owen"
+date: "11/6/2017"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+```
+
+```{r}
+# Reading in data
+iowa = read.csv("train.csv", stringsAsFactors = F)
+TEST = read.csv("test.csv", stringsAsFactors = F)
+
+# dropping Id columns
+iowa = iowa[-1]
+TEST = TEST[-1]
+```
+
+```{r}
+# dropping columns with more than 95% of data as one category (or zero)
+iowa = iowa %>% select(-c(Street, Alley, Utilities, LandSlope, Condition2, RoofMatl, BsmtFinSF2,
+                   Heating, LowQualFinSF, Functional, X3SsnPorch, PoolArea, PoolQC,
+                   MiscFeature, MiscVal))
+
+TEST = TEST %>% select(-c(Street, Alley, Utilities, LandSlope, Condition2, RoofMatl, BsmtFinSF2,
+                   Heating, LowQualFinSF, Functional, X3SsnPorch, PoolArea, PoolQC,
+                   MiscFeature, MiscVal))
+```
+
+```{r}
+# convert to categorical
+iowa$MSSubClass = as.factor(iowa$MSSubClass)
+
+TEST$MSSubClass = as.factor(TEST$MSSubClass)
+```
+
+```{r}
+# adjust name
+iowa[iowa$MSZoning == "C (all)", ]$MSZoning = "C"
+
+# impute missing by mode; adjust name
+TEST = TEST %>% mutate(MSZoning = replace(MSZoning, is.na(MSZoning), "RL"))
+TEST[TEST$MSZoning == "C (all)", ]$MSZoning = "C"
+```
+
+```{r}
+# impute NA's by Neighborhood median; transform
+iowa = iowa %>% 
+    group_by(Neighborhood) %>% 
+    mutate(LotFrontage = replace(LotFrontage, is.na(LotFrontage), median(LotFrontage, na.rm = T))) %>% ungroup()
+iowa$LotFrontage = log(iowa$LotFrontage + 1)
+
+TEST = TEST %>% 
+    group_by(Neighborhood) %>% 
+    mutate(LotFrontage = replace(LotFrontage, is.na(LotFrontage), median(LotFrontage, na.rm = T))) %>% ungroup()
+TEST$LotFrontage = log(TEST$LotFrontage + 1)
+```
+
+```{r}
+# transforming numerical variables
+iowa$LotArea = log(iowa$LotArea + 1)
+iowa$X1stFlrSF = log(iowa$X1stFlrSF + 1)
+iowa$GrLivArea = log(iowa$GrLivArea + 1)
+iowa$WoodDeckSF = log(iowa$WoodDeckSF + 1)
+iowa$OpenPorchSF = log(iowa$OpenPorchSF + 1)
+iowa$EnclosedPorch = log(iowa$EnclosedPorch + 1)
+iowa$ScreenPorch = log(iowa$ScreenPorch + 1)
+
+TEST$LotArea = log(TEST$LotArea + 1)
+TEST$X1stFlrSF = log(TEST$X1stFlrSF + 1)
+TEST$GrLivArea = log(TEST$GrLivArea + 1)
+TEST$WoodDeckSF = log(TEST$WoodDeckSF + 1)
+TEST$OpenPorchSF = log(TEST$OpenPorchSF + 1)
+TEST$EnclosedPorch = log(TEST$EnclosedPorch + 1)
+TEST$ScreenPorch = log(TEST$ScreenPorch + 1)
+```
+
+```{r}
+# manual imputing to mode of VinylSd
+TEST[692, ]$Exterior1st = "VinylSd"
+TEST[692, ]$Exterior2nd = "VinylSd"
+```
+
+```{r}
+# change NAs to "Absent"; change class "None" to "Absent"
+iowa$MasVnrType[is.na(iowa$MasVnrType)] = "Absent"
+iowa[iowa$MasVnrType == "None", ]$MasVnrType = "Absent"
+
+TEST$MasVnrType[is.na(TEST$MasVnrType)] = "Absent"
+TEST[TEST$MasVnrType == "None", ]$MasVnrType = "Absent"
+```
+
+```{r}
+# imputing NAs to zeroes; transforming
+iowa = iowa %>% 
+    mutate(MasVnrArea = replace(MasVnrArea, is.na(MasVnrArea), 0))
+iowa$MasVnrArea = log(iowa$MasVnrArea + 1)
+
+# imputing index 1151 to zero; imputing NAs to zero; transform
+TEST[1151, ]$MasVnrArea = 0
+TEST = TEST %>% 
+    mutate(MasVnrArea = replace(MasVnrArea, is.na(MasVnrArea), 0))
+TEST$MasVnrArea = log(TEST$MasVnrArea + 1)
+```
+
+```{r}
+# Handling basement variables
+# NAs to "Absent"
+iowa$BsmtQual[is.na(iowa$BsmtQual)] = "Absent"
+iowa$BsmtCond[is.na(iowa$BsmtCond)] = "Absent"
+iowa$BsmtExposure[is.na(iowa$BsmtExposure)] = "Absent"
+iowa$BsmtFinType1[is.na(iowa$BsmtFinType1)] = "Absent"
+
+# transform
+iowa$BsmtFinSF1 = log(iowa$BsmtFinSF1 + 1)
+iowa$BsmtUnfSF = log(iowa$BsmtUnfSF + 1)
+
+# impute 333 to GLQ
+iowa[333, ]$BsmtFinType2 = "GLQ"
+iowa$BsmtFinType2[is.na(iowa$BsmtFinType2)] = "Absent"
+
+# -------------------
+# impute 758, 759 to TA
+TEST[c(758, 759), ]$BsmtQual = "TA"
+TEST$BsmtQual[is.na(TEST$BsmtQual)] = "Absent"
+
+# impute 581, 726, 1065 to TA
+TEST[c(581, 726, 1065), ]$BsmtCond = "TA"
+TEST$BsmtCond[is.na(TEST$BsmtCond)] = "Absent"
+
+# impute 28, 889 to No
+TEST[c(28, 889), ]$BsmtExposure = "No"
+TEST$BsmtExposure[is.na(TEST$BsmtExposure)] = "Absent"
+
+# NAs to "Absent"
+TEST$BsmtFinType1[is.na(TEST$BsmtFinType1)] = "Absent"
+TEST$BsmtFinType2[is.na(TEST$BsmtFinType2)] = "Absent"
+
+# imputing BsmtFinSF1, BsmtUnfSF, TotalBsmtSF to zero
+TEST = TEST %>% 
+    mutate(BsmtFinSF1 = replace(BsmtFinSF1, is.na(BsmtFinSF1), 0),
+           BsmtUnfSF = replace(BsmtUnfSF, is.na(BsmtUnfSF), 0),
+           TotalBsmtSF = replace(TotalBsmtSF, is.na(TotalBsmtSF), 0))
+
+TEST$BsmtFinSF1 = log(TEST$BsmtFinSF1 + 1)
+TEST$BsmtUnfSF = log(TEST$BsmtUnfSF + 1)
+```
+
+```{r}
+# impute 1380 to SBrkr
+iowa[1380, ]$Electrical = "SBrkr"
+```
+
+```{r}
+# 661, 729 to zero
+TEST = TEST %>%
+    mutate(BsmtFullBath = replace(BsmtFullBath, is.na(BsmtFullBath), 0),
+           BsmtHalfBath = replace(BsmtHalfBath, is.na(BsmtHalfBath), 0))
+```
+
+```{r}
+# impute to TA
+TEST[96, ]$KitchenQual = "TA"
+```
+
+```{r}
+# replacing NAs with "Absent"
+iowa$FireplaceQu[is.na(iowa$FireplaceQu)] = "Absent"
+
+TEST$FireplaceQu[is.na(TEST$FireplaceQu)] = "Absent"
+```
+
+```{r}
+# handling garage variables
+# replacing NAs with "Absent"
+iowa$GarageType[is.na(iowa$GarageType)] = "Absent"
+
+# imputing to "yes"/"no"
+iowa$GarageYrBlt[is.na(iowa$GarageYrBlt)] = 0
+iowa$GarageYrBlt = ifelse(iowa$GarageYrBlt > 0, 1, 0)
+
+# NAs to "Absent"
+iowa$GarageFinish[is.na(iowa$GarageFinish)] = "Absent"
+iowa$GarageQual[is.na(iowa$GarageQual)] = "Absent"
+iowa$GarageCond[is.na(iowa$GarageCond)] = "Absent"
+
+# ----------------
+# imputing to "Absent"
+TEST[1117, ]$GarageType = "Absent"
+TEST$GarageType[is.na(TEST$GarageType)] = "Absent"
+
+# imputing to "yes" and then making "yes"/"no"
+TEST[667, ]$GarageYrBlt = 1
+TEST$GarageYrBlt[is.na(TEST$GarageYrBlt)] = 0
+TEST$GarageYrBlt = ifelse(TEST$GarageYrBlt > 0, 1, 0)
+
+# impute to "Unf"
+TEST[667, ]$GarageFinish = "Unf"
+TEST$GarageFinish[is.na(TEST$GarageFinish)] = "Absent"
+
+# impute to zero
+TEST[1117, ]$GarageCars = 0
+TEST[1117, ]$GarageArea = 0
+
+# impute to TA; NAs to "Absent"
+TEST[667, ]$GarageQual = "TA"
+TEST$GarageQual[is.na(TEST$GarageQual)] = "Absent"
+TEST[667, ]$GarageCond = "TA"
+TEST$GarageCond[is.na(TEST$GarageCond)] = "Absent"
+```
+
+```{r}
+# NAs to "Absent"
+iowa$Fence[is.na(iowa$Fence)] = "Absent"
+
+TEST$Fence[is.na(TEST$Fence)] = "Absent"
+```
+
+```{r}
+# impute to WD
+TEST[1030, ]$SaleType = "WD"
+```
+
+```{r}
+# convert all categorical variables to factors
+categorical = c("MSSubClass", "MSZoning", "LotShape", "LandContour", "LotConfig", "Neighborhood", 
+               "Condition1", "BldgType", "HouseStyle", "RoofStyle",
+               "Exterior1st", "Exterior2nd", "MasVnrType", "ExterQual",
+               "ExterCond", "Foundation", "BsmtQual", "BsmtCond", "BsmtExposure",
+               "BsmtFinType1", "BsmtFinType2", "HeatingQC", "CentralAir",
+               "Electrical", "KitchenQual", "FireplaceQu", "GarageType",
+               "GarageFinish", "GarageQual", "GarageCond", "PavedDrive", 
+               "Fence", "MoSold", "YrSold", "SaleType", "SaleCondition")
+
+for (c in categorical){
+    iowa[[c]] = as.factor(iowa[[c]])
+}
+
+for (c in categorical){
+    TEST[[c]] = as.factor(TEST[[c]])
+}
+```
+
+```{r}
+sum(is.na(iowa))
+sum(is.na(TEST))
+```
+
+```{r}
+y = apply(iowa[-65], 2, class)
+x = apply(TEST, 2, class)
+
+all(y == x)
+```
+
+```{r}
+write.csv(iowa, "train_clean.csv", row.names = F)
+write.csv(TEST, "test_clean.csv", row.names = F)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
